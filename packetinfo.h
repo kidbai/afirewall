@@ -32,6 +32,8 @@ enum network_header_types {
 struct packet_info {
 	char  	process_cmd[PACKETINFO_CMDLEN];
 	int		process_id;
+	char	local_addr[PACKETINFO_ADDRLEN];
+	int		local_port;
 	char  	remote_addr[PACKETINFO_ADDRLEN];	/* enough to hold an ipv6 address */
 	int 	remote_port;
 
