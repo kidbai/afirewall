@@ -8,68 +8,16 @@
 
 #include "packetinfo.h"
 
-/* returns packet id */
-static u_int32_t print_pkt(struct nlif_handle *nlif, struct nfq_data *tb) {
-	int id = 0;
-	struct nfqnl_msg_packet_hdr *ph;
-	struct nfqnl_msg_packet_hw *hwph;
-	u_int32_t mark, ifi;
-	int ret;
-	char *data;
-	static char buffer[1024];
-
-	ph = nfq_get_msg_packet_hdr(tb);
-	if (ph) {
-		id = ntohl(ph->packet_id);
-		printf("hw_protocol=0x%04x hook=%u id=%u ", ntohs(ph->hw_protocol),
-				ph->hook, id);
-	}
-
-	hwph = nfq_get_packet_hw(tb);
-	if (hwph) {
-		int i, hlen = ntohs(hwph->hw_addrlen);
-
-		printf("hw_src_addr=");
-		for (i = 0; i < hlen - 1; i++)
-			printf("%02x:", hwph->hw_addr[i]);
-		printf("%02x ", hwph->hw_addr[hlen - 1]);
-	}
-
-	mark = nfq_get_nfmark(tb);
-	if (mark)
-		printf("mark=%u ", mark);
-
-	ifi = nfq_get_indev(tb);
-	if (ifi)
-		printf("indev=%u ", ifi);
-
-	ifi = nfq_get_outdev(tb);
-	if (ifi) {
-		nfq_get_outdev_name(nlif, tb, buffer);
-		printf("outdev=%u (%s) ", ifi, buffer);
-	}
-	ifi = nfq_get_physindev(tb);
-	if (ifi)
-		printf("physindev=%u ", ifi);
-
-	ifi = nfq_get_physoutdev(tb);
-	if (ifi)
-		printf("physoutdev=%u ", ifi);
-
-	ret = nfq_get_payload(tb, &data);
-	if (ret >= 0)
-		printf("payload_len=%d first byte= %02X", ret, (int) (data[0]&0xff));
-
-	fputc('\n', stdout);
-
-	return id;
-}
-
-static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
+/* will be called when a packet enters the netfilter queue */
+static int packet_callback(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 		struct nfq_data *nfa, void *data) {
-
 	static struct nlif_handle *nlif;
+	static struct packet_info pinfo;
+	static struct nfqnl_msg_packet_hdr *ph;
 
+	u_int32_t id = 0;
+
+	/* query network interface information */
 	if(!nlif) {
 		nlif = nlif_open();
 		if(!nlif) {
@@ -78,70 +26,72 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 		}
 		nlif_query(nlif);
 	}
-	u_int32_t id = print_pkt(nlif, nfa);
-	printf("entering callback\n");
+
+	/* retrieve packet id for verdict */
+	ph = nfq_get_msg_packet_hdr(nfa);
+	if (ph) {
+		id = ntohl(ph->packet_id);
+	}
+
+	/* get packet information and print it */
+	pi_get(&pinfo, nlif, nfa);
+	pi_print(&pinfo);
+
+	/* accept... */
 	return nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
 }
 
 int main(int argc, char **argv) {
-	struct nfq_handle *h;
-	struct nfq_q_handle *qh;
-	struct nfnl_handle *nh;
-	int fd;
-	int rv;
+	struct nfq_handle *h;		/* NFQ handle */
+	struct nfq_q_handle *qh;	/* queue handle */
+	int fd;						/* file handle for talking with NFQ API */
+	int rv;						/* return value buffer for recv() call */
+
+	/* packet buffer.
+	 * Needs special alignedness for kernel<->userspace interaction (?) */
 	char buf[4096] __attribute__ ((aligned));
 
-	printf("opening library handle\n");
 	h = nfq_open();
 	if (!h) {
 		fprintf(stderr, "error during nfq_open()\n");
 		exit(1);
 	}
 
-	printf("unbinding existing nf_queue handler for AF_INET (if any)\n");
 	if (nfq_unbind_pf(h, AF_INET) < 0) {
 		fprintf(stderr, "error during nfq_unbind_pf()\n");
 		exit(1);
 	}
 
-	printf("binding nfnetlink_queue as nf_queue handler for AF_INET\n");
 	if (nfq_bind_pf(h, AF_INET) < 0) {
 		fprintf(stderr, "error during nfq_bind_pf()\n");
 		exit(1);
 	}
 
-	printf("binding this socket to queue '0'\n");
-	qh = nfq_create_queue(h, 0, &cb, NULL);
+	qh = nfq_create_queue(h, 0, &packet_callback, NULL);
 	if (!qh) {
 		fprintf(stderr, "error during nfq_create_queue()\n");
 		exit(1);
 	}
 
-	printf("setting copy_packet mode\n");
+	/* need to copy whole packet to buffer because we need to look into the
+	 * protocol headers.
+	 */
 	if (nfq_set_mode(qh, NFQNL_COPY_PACKET, PACKETINFO_PAYLOAD) < 0) {
 		fprintf(stderr, "can't set packet_copy mode\n");
 		exit(1);
 	}
 
+	/* talk to the NFQ API via fd */
 	fd = nfq_fd(h);
 
+	/* main loop for packet handling. Calls callback for every packet */
 	while ((rv = recv(fd, buf, sizeof(buf), 0)) && rv >= 0) {
-		printf("pkt received\n");
 		nfq_handle_packet(h, buf, rv);
 	}
 
-	printf("unbinding from queue 0\n");
+	/* clean up. BTW, we'll probably never reach this */
 	nfq_destroy_queue(qh);
-
-#ifdef INSANE
-	/* normally, applications SHOULD NOT issue this command, since
-	 * it detaches other programs/sockets from AF_INET, too ! */
-	printf("unbinding from AF_INET\n");
-	nfq_unbind_pf(h, AF_INET);
-#endif
-
-	printf("closing library handle\n");
 	nfq_close(h);
 
-	exit(0);
+	return 0;
 }
