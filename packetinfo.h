@@ -15,6 +15,8 @@
 #define PACKETINFO_DEVLEN IFNAMSIZ
 #define PACKETINFO_PAYLOAD 0xFFFFU
 
+#define PACKETINFO_RAW_ADDRLEN	16
+
 #if PACKETINFO_ADDRLEN < 40
 #warning address length must be at least 40 to capture IPv6 addresses
 #endif
@@ -35,6 +37,11 @@ enum network_header_types {
 	UNKNOWN_NET_TYPE
 };
 
+typedef struct raw_data_t {
+	char	local_addr[PACKETINFO_RAW_ADDRLEN];
+	char	remote_addr[PACKETINFO_RAW_ADDRLEN];
+} raw_data_t;
+
 struct packet_info {
 	/* ID and command-line of the process owning the socket */
 	char  	process_cmd[PACKETINFO_CMDLEN];
@@ -54,6 +61,8 @@ struct packet_info {
 
 	/* network-layer protocol type */
 	enum network_header_types network_header_type;
+
+	raw_data_t	_raw;
 };
 
 /* fetch information on a packet */

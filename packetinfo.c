@@ -14,6 +14,7 @@
 #include <linux/netfilter.h>
 
 #include "packetinfo.h"
+#include "procutils.h"
 
 /* IANA IP protocol numbers, see RFC 5137 -> http://www.iana.org/go/rfc5237 */
 #define IP_PROTOCOL_UDP (0x11)
@@ -143,6 +144,8 @@ static void decode_ip(char *payload, struct packet_info *pinfo) {
 	 */
 	format_ip_address(pinfo->local_addr, PACKETINFO_ADDRLEN, &payload[12], IP);
 	format_ip_address(pinfo->remote_addr, PACKETINFO_ADDRLEN, &payload[16], IP);
+	memcpy(pinfo->_raw.local_addr, &payload[12], 4);
+	memcpy(pinfo->_raw.remote_addr, &payload[16], 4);
 
 	/* get information on next header type, 8bit on offset 9, and continue
 	 * with extracting information from transport layer protocols. These
@@ -173,6 +176,8 @@ static void decode_ip6(char *payload, struct packet_info *pinfo) {
 	 */
 	format_ip_address(pinfo->local_addr, PACKETINFO_ADDRLEN, &payload[8], IP6);
 	format_ip_address(pinfo->remote_addr, PACKETINFO_ADDRLEN, &payload[24], IP6);
+	memcpy(pinfo->_raw.local_addr, &payload[8], 16);
+	memcpy(pinfo->_raw.remote_addr, &payload[24], 16);
 
 	/* get information on next header type, 8bit on offset 6, and continue
 	 * with extracting information from transport layer protocols. These
@@ -247,6 +252,8 @@ void pi_print(struct packet_info *pinfo) {
 		printf("outgoing packet: interface: %s network: IP transport: %s source: %s:%u destination: %s:%u\n",
 				pinfo->interface, trans,
 				pinfo->local_addr, pinfo->local_port, pinfo->remote_addr, pinfo->remote_port);
+		int inode = address2sockfd(pinfo);
+		printf("inode: %d\n", inode);
 		break;
 	case IP6:
 		printf("outgoing packet: interface: %s network: IP6 transport: %s source: [%s]:%u destination: [%s]:%u\n",
