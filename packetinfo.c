@@ -253,7 +253,13 @@ void pi_print(struct packet_info *pinfo) {
 				pinfo->interface, trans,
 				pinfo->local_addr, pinfo->local_port, pinfo->remote_addr, pinfo->remote_port);
 		int inode = address2sockfd(pinfo);
-		printf("inode: %d\n", inode);
+		if(inode < 1) {
+			pinfo->process_id = 0;
+
+			pinfo->process_cmd[0] = '\0';
+		}
+		sockfd2process(pinfo, inode);
+		printf("inode: %d, pid: %d, cmd: %s\n", inode, pinfo->process_id, pinfo->process_cmd);
 		break;
 	case IP6:
 		printf("outgoing packet: interface: %s network: IP6 transport: %s source: [%s]:%u destination: [%s]:%u\n",

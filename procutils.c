@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include "packetinfo.h"
 
 #define LINEBUF_LEN 256
@@ -102,6 +105,80 @@ static int parse_tcp_table(struct packet_info *pinfo) {
 	}
 	fclose(fp);
 	return inode;
+}
+
+static void read_cmdline(const char *dirname, struct packet_info *pinfo) {
+	FILE *fp = fopen(dirname, "r");
+	fgets(pinfo->process_cmd, PACKETINFO_CMDLEN-1, fp);
+	fclose(fp);
+}
+
+static int process_proc_dir(const char *dirname, int sockfd, struct packet_info *pinfo) {
+	static char dirbuf[64];
+	static char cmdbuf[PACKETINFO_CMDLEN];
+	static char linkbuf[64];
+	char *linkptr;
+	int len;
+	int result = 0;
+
+	DIR *dir;
+	struct dirent *file;
+
+	snprintf(dirbuf, 64, "/proc/%s/fd", dirname);
+	dir = opendir(dirbuf);
+	if(!dir) {
+		return 0;
+	}
+	// read /proc/*/fd contents
+	while((file = readdir(dir))) {
+		// check if it's a link
+		if(file->d_type == DT_LNK) {
+			// check if the link resolves to "socket:[...]"
+			snprintf(cmdbuf, PACKETINFO_CMDLEN, "/proc/%s/fd/%s", dirname, file->d_name);
+			len = readlink(cmdbuf, linkbuf, 63);
+			if(len != -1)
+				linkbuf[len] = '\0';
+			if(strncmp(linkbuf, "socket", 6) == 0) {
+				// advance pointer to socket number
+				linkptr = linkbuf+8;
+
+				// compare socket number and the requested socket number
+				if(atoi(linkptr) == sockfd) {
+					pinfo->process_id = atoi(dirname);
+					snprintf(cmdbuf, PACKETINFO_CMDLEN, "/proc/%s/cmdline", dirname);
+					read_cmdline(cmdbuf, pinfo);
+					result = 1;
+					break;
+				}
+			}
+		}
+	}
+
+
+	closedir(dir);
+	return result;
+}
+
+int sockfd2process(struct packet_info *pinfo, int sockfd) {
+	DIR *dir;
+	struct dirent *file;
+	int result = 0;
+
+	dir = opendir("/proc");
+	if(!dir) {
+		perror("Could not open /proc");
+		return 0;
+	}
+
+	while((file = readdir(dir))) {
+		if(process_proc_dir(file->d_name, sockfd, pinfo)) {
+			result = 1;
+			break;
+		}
+	}
+	closedir(dir);
+
+	return result;
 }
 
 int address2sockfd(struct packet_info *pinfo) {
