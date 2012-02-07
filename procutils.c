@@ -11,7 +11,7 @@
 
 static inline  void hex2bin(char *bin, const char *src, int len) {
 	int i;
-	int val;
+	unsigned int val;
 	for(i=0; i < len; i++) {
 		sscanf(src, "%02X", &val);
 		*bin++ = val & 0xFF;
@@ -55,7 +55,7 @@ static int compare_address(char *line, char *addr,
 }
 
 static int compare_port(char *line, int port) {
-	int other = 0;
+	unsigned int other = 0;
 	sscanf(line, "%4x", &other);
 	return (other == port);
 }
