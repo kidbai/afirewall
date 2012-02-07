@@ -1,0 +1,67 @@
+
+	An application-based firewall for linux
+		- currently without a name
+
+
+A firewall application which filters outgoing traffic.
+
+
+1. DEPENDENCIES
+2. HOW TO BUILD
+3. HOW TO RUN
+4. HOW DOES IT WORK?
+5. HOW TO RUIN YOUR COMPUTER
+
+1. DEPENDENCIES
+===============
+For running:
+- libnetfilter_queue
+	* Debian: apt-get install libnetfilter-queue1
+- iptables with QUEUE target and STATE module support
+
+For building:
+- libnetfilter_queue headers
+	* Debian: apt-get install libnetfilter-queue-dev
+
+2. HOW TO BUILD
+===============
+Just "make" it.
+
+3. HOW TO RUN
+=============
+Don't. It's not finished or stable or secure and may cause serious injury
+or death to you and your computer.
+
+If you are of the Indiana Jones type, you can try the following:
+
+1) add the QUEUE target to the output rules to tell iptables to queue the packets
+   for userspace processing:
+   
+	iptables -A OUTPUT -m state --state=NEW -j QUEUE
+   
+2) run the firewall executable (needs root privileges)
+
+	./firewall
+
+Right now, you can just watch your TCP SYN packets get decoded and translated
+to an application name.
+
+4. HOW DOES IT WORK?
+====================
+The software receives the packets via the netfilter/netlink API and does the
+following:
+
+1. get interface name from API
+2. takes the payload and decodes IP/IP6/TCP/UDP/ICMP/ICMP6 headers
+3. parses /proc/net/{tcp,tcp6,udp,udp6,icmp}, matches the local and remote
+   addresses to the one in the packet and retrieves the inode number
+4. traverses all /proc/*/fd directories to find the entry that matches
+	"socket:[INODE]" where INODE is the number we have found in the /proc/net/*
+	table. If a match is found, collect the pid and cmdline.
+
+5. HOW TO RUIN YOUR COMPUTER
+============================
+See 3. HOW TO RUN
+
+
+
