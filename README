@@ -5,12 +5,15 @@
 
 A firewall application which filters outgoing traffic.
 
-
+Contents:
+----------------
 1. DEPENDENCIES
 2. HOW TO BUILD
 3. HOW TO RUN
 4. HOW DOES IT WORK?
 5. HOW TO RUIN YOUR COMPUTER
+6. LICENCE
+
 
 1. DEPENDENCIES
 ===============
@@ -63,5 +66,8 @@ following:
 ============================
 See 3. HOW TO RUN
 
-
-
+6. LICENCE
+============================
+All source code files, whether they contain a licence note or not,
+are published unter a CC-BY-SA licence. You can find more information on
+http://creativecommons.org/licenses/by-sa/3.0/
