@@ -23,7 +23,7 @@ For running:
 - iptables with QUEUE target and STATE module support
 
 For building:
-- libnetfilter_queue headers
+- libnetfilter_queue headers with pkg-config support
 	* Debian: apt-get install libnetfilter-queue-dev
 
 2. HOW TO BUILD
@@ -39,9 +39,9 @@ If you are of the Indiana Jones type, you can try the following:
 
 1) add the QUEUE target to the output rules to tell iptables to queue the packets
    for userspace processing:
-   
+
 	iptables -A OUTPUT -m state --state=NEW -j QUEUE
-   
+
 2) run the firewall executable (needs root privileges)
 
 	./firewall
@@ -68,8 +68,8 @@ See 3. HOW TO RUN
 
 6. LICENSE
 ============================
-All source code files, documentation files, and auxiliary files, 
-whether they contain a licence note or not, 
+All source code files, documentation files, and auxiliary files,
+whether they contain a licence note or not,
 are published unter the 3-clause "New BSD License":
 
 Copyright (c) 2012, Jan Christian Kaessens
