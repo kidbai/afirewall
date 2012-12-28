@@ -48,11 +48,17 @@ const char *pi_transport_hdr_type2string(enum transport_header_types t) {
 	const char *text;
 
 	switch(t) {
-		case TCP: text = "TCP"; break;
-		case UDP: text = "UDP"; break;
+		case TCP:
+			text = "TCP";
+			break;
+		case UDP:
+			text = "UDP";
+			break;
 		case UNKNOWN_TRANSPORT_TYPE:
+			/* no break */
 		default:
 			text = "(unknown)";
+			break;
 	}
 	return text;
 }
@@ -64,11 +70,17 @@ const char *pi_network_hdr_type2string(enum network_header_types t) {
 	const char *text;
 
 	switch(t) {
-		case IP: text = "IP"; break;
-		case IP6: text = "IP6"; break;
+		case IP:
+			text = "IP";
+			break;
+		case IP6:
+			text = "IP6";
+			break;
 		case UNKNOWN_NET_TYPE:
+			/* no break */
 		default:
 			text = "(unknown)";
+			break;
 	}
 	return text;
 }
@@ -139,8 +151,10 @@ static void format_ip_address(char *dest, unsigned int dest_len,
 				ntohs(*(uint16_t*) &dest[4]), ntohs(*(uint16_t*) &dest[6]),
 				ntohs(*(uint16_t*) &dest[8]), ntohs(*(uint16_t*) &dest[10]),
 				ntohs(*(uint16_t*) &dest[12]), ntohs(*(uint16_t*) &dest[14]));
+		break;
 	default:
 		sprintf(dest, "(unknown)");
+		break;
 	}
 
 	/* just in case... */
@@ -183,6 +197,7 @@ static void decode_ip(char *payload, struct packet_info *pinfo) {
 		break;
 	default:
 		pinfo->transport_header_type = UNKNOWN_TRANSPORT_TYPE;
+		break;
 	}
 }
 
@@ -215,6 +230,7 @@ static void decode_ip6(char *payload, struct packet_info *pinfo) {
 		break;
 	default:
 		pinfo->transport_header_type = UNKNOWN_TRANSPORT_TYPE;
+		break;
 	}
 }
 
@@ -239,6 +255,7 @@ static void decode_packet(char *payload, struct packet_info *pinfo) {
 	default:
 		pinfo->network_header_type = UNKNOWN_NET_TYPE;
 		pinfo->transport_header_type = UNKNOWN_TRANSPORT_TYPE;
+		break;
 	}
 }
 
@@ -293,6 +310,7 @@ void pi_print(struct packet_info *pinfo) {
 
 		printf("outgoing packet: interface: %s network: %s transport: %s\n",
 				pinfo->interface, net, trans);
+		break;
 	}
 
 }

@@ -10,11 +10,15 @@ SRC = 	main.c \
 		packetinfo.c \
 		procutils.c
 
+# handle libraries that support PKG-CONFIG
+PKG_CONFIG = 	libnetfilter_queue \
+				libnfnetlink
+
 # link against the following libs
-LIBS = $(shell pkg-config --libs libnetfilter_queue)
+LIBS = 
 
 # include directories and linker search path
-INCDIRS = $(shell pkg-config --cflags libnetfilter_queue)
+INCDIRS = 
 LIBDIRS = 
 
 # enable debug mode. (defines macro DEBUG, sets -O0 and -g)
@@ -34,23 +38,25 @@ BIN = firewall
 # Nothing to change here. Move along!
 ############################################################################## 
 
+ALL_CFLAGS = $(CFLAGS) \
+		$(addprefix -I, $(INCDIRS)) \
+		$(addprefix -D, $(DEFINES))
+
 # evaluate DEBUG_MODE switch and set CFLAGS appropriately
 ifeq ($(DEBUG_MODE),1)
-	ALL_CFLAGS = $(CFLAGS) \
-		$(INCDIRS) \
-		$(addprefix -D, $(DEFINES))	\
-		-DDEBUG -O0 -g
+	ALL_CFLAGS += -DDEBUG -O0 -g
 else
-	ALL_CFLAGS = $(CFLAGS) \
-		$(INCDIRS) \
-		$(addprefix -D, $(DEFINES)) \
-		-O2 -fomit-frame-pointer
+	ALL_CFLAGS += -O2 -fomit-frame-pointer
 endif
 
 # add libraries to LDFLAGS
 ALL_LDFLAGS = $(LDFLAGS) \
 	$(addprefix -L, $(LIBDIRS)) \
 	$(LIBS)
+
+# handle PKG-CONFIG stuff
+ALL_CFLAGS += $(shell pkg-config --cflags $(PKG_CONFIG))
+ALL_LDFLAGS += $(shell pkg-config --libs $(PKG_CONFIG))
 
 # generate dependency and object file lists
 OBJS = $(SRC:.c=.o)
