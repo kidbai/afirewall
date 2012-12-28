@@ -11,12 +11,11 @@ SRC = 	main.c \
 		procutils.c
 
 # link against the following libs
-LIBS = 	netfilter_queue \
-		nfnetlink
+LIBS = $(shell pkg-config --libs libnetfilter_queue)
 
 # include directories and linker search path
-INCDIRS = 
-LIBDIRS =
+INCDIRS = $(shell pkg-config --cflags libnetfilter_queue)
+LIBDIRS = 
 
 # enable debug mode. (defines macro DEBUG, sets -O0 and -g)
 DEBUG_MODE = 1
@@ -38,12 +37,12 @@ BIN = firewall
 # evaluate DEBUG_MODE switch and set CFLAGS appropriately
 ifeq ($(DEBUG_MODE),1)
 	ALL_CFLAGS = $(CFLAGS) \
-		$(addprefix -I, $(INCDIRS)) \
+		$(INCDIRS) \
 		$(addprefix -D, $(DEFINES))	\
 		-DDEBUG -O0 -g
 else
 	ALL_CFLAGS = $(CFLAGS) \
-		$(addprefix -I, $(INCDIRS)) \
+		$(INCDIRS) \
 		$(addprefix -D, $(DEFINES)) \
 		-O2 -fomit-frame-pointer
 endif
@@ -51,7 +50,7 @@ endif
 # add libraries to LDFLAGS
 ALL_LDFLAGS = $(LDFLAGS) \
 	$(addprefix -L, $(LIBDIRS)) \
-	$(addprefix -l, $(LIBS))
+	$(LIBS)
 
 # generate dependency and object file lists
 OBJS = $(SRC:.c=.o)
